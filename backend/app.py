@@ -10,6 +10,18 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)  # Umożliwia zapytania CORS z frontendu
 
+# Endpoint dla strony głównej
+@app.route('/')
+def home():
+    return jsonify({
+        "status": "ok", 
+        "message": "Amazon Reports Processor API is running",
+        "endpoints": [
+            "/api/process-file",
+            "/api/test-data"
+        ]
+    })
+
 # Uniwersalne mapowanie terminów dla różnych języków
 language_mappings = {
     'uk': {  # Amazon UK (English)
@@ -255,4 +267,7 @@ def test_data():
     return jsonify(result)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Aplikacja będzie nasłuchiwać na porcie, który ustawia render.com (env var PORT)
+    # lub na porcie 10000 jeśli zmienna PORT nie jest ustawiona
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
