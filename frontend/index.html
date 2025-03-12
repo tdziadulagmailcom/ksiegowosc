@@ -490,29 +490,13 @@
                         backendUrlSection.classList.add('hidden');
                     }
                 });
-            
-            downloadBtn.addEventListener('click', function() {
-                const labels = translations['pl'];
-                
-                if (allProcessedData.length > 0) {
-                    generateExcel(allProcessedData);
-                } else {
-                    showAlert(labels.noDataError, 'error');
-                }
             });
             
-            clearBtn.addEventListener('click', function() {
-                const labels = translations['pl'];
-                
-                // Czyszczenie danych
-                allProcessedData = [];
-                resultBody.innerHTML = '';
-                
-                // Ukrywamy obszar wyników
-                resultArea.classList.add('hidden');
-                showAlert(labels.dataCleared, 'success');
-            });
-            });
+            // Funkcja sprawdzająca aktualny tryb
+            function getMode() {
+                const checkedRadio = document.querySelector('input[name="mode"]:checked');
+                return checkedRadio ? checkedRadio.value : 'demo';
+            }
             
             // Funkcja do przetwarzania pliku przez backend
             async function processFileWithBackend(file, platform) {
@@ -552,3 +536,214 @@
                     }
                     
                     throw new Error(translations['pl'].backendError);
+                }
+            }
+            
+            // Funkcja dodająca nowe dane do wyników
+            function addDataToResults(data) {
+                // Dodajemy te dane do naszego zbioru danych
+                allProcessedData.push(data);
+                
+                // Wyświetlamy dane w tabeli
+                Object.entries(data.financialData).forEach(([category, value]) => {
+                    // Pomijamy kategorię "Transfers"
+                    if (category === 'Transfers') return;
+                    
+                    const row = document.createElement('tr');
+                    row.dataset.entryId = allProcessedData.length + '-' + category; // Unikalny identyfikator wiersza
+                    
+                    const platformCell = document.createElement('td');
+                    platformCell.textContent = data.platform;
+                    
+                    const categoryCell = document.createElement('td');
+                    categoryCell.textContent = category;
+                    
+                    const valueCell = document.createElement('td');
+                    valueCell.textContent = value.toFixed(2);
+                    // Dodajemy klasę dla wartości
+                    if (value < 0) {
+                        valueCell.className = 'negative-value';
+                    } else {
+                        valueCell.className = 'positive-value';
+                    }
+                    
+                    // Dodajemy kolumnę TAX
+                    const taxCell = document.createElement('td');
+                    const taxValue = data.taxData && data.taxData[category] ? data.taxData[category] : 0;
+                    taxCell.textContent = taxValue.toFixed(2);
+                    // Dodajemy klasę dla wartości tax
+                    if (taxValue < 0) {
+                        taxCell.className = 'negative-value';
+                    } else if (taxValue > 0) {
+                        taxCell.className = 'positive-value';
+                    }
+                    
+                    const currencyCell = document.createElement('td');
+                    currencyCell.textContent = data.currency || '';
+                    
+                    const actionsCell = document.createElement('td');
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.textContent = translations['pl'].deleteBtn;
+                    
+                    deleteBtn.addEventListener('click', function() {
+                        // Usuwamy wiersz z tabeli
+                        row.remove();
+                        
+                        // Usuwamy dane z tablicy danych
+                        const entryIndex = allProcessedData.findIndex(d => 
+                            d.platform === data.platform && 
+                            d.financialData[category] === value
+                        );
+                        
+                        if (entryIndex > -1) {
+                            // Usuwamy kategorię z obiektu danych, ale zachowujemy inne kategorie
+                            delete allProcessedData[entryIndex].financialData[category];
+                            if (data.taxData) {
+                                delete allProcessedData[entryIndex].taxData[category];
+                            }
+                            
+                            // Jeśli obiekt finansowy jest pusty, usuwamy cały wpis
+                            if (Object.keys(allProcessedData[entryIndex].financialData).length === 0) {
+                                allProcessedData.splice(entryIndex, 1);
+                            }
+                        }
+                    });
+                    
+                    actionsCell.appendChild(deleteBtn);
+                    
+                    row.appendChild(platformCell);
+                    row.appendChild(categoryCell);
+                    row.appendChild(valueCell);
+                    row.appendChild(taxCell);
+                    row.appendChild(currencyCell);
+                    row.appendChild(actionsCell);
+                    
+                    resultBody.appendChild(row);
+                });
+            }
+            
+            // Funkcja pokazująca alert
+            function showAlert(message, type) {
+                alertArea.innerHTML = message;
+                alertArea.className = `alert alert-${type}`;
+                alertArea.classList.remove('hidden');
+                
+                // Automatycznie ukrywamy alert po 5 sekundach
+                setTimeout(() => {
+                    alertArea.classList.add('hidden');
+                }, 5000);
+            }
+            
+            // Funkcja generująca plik Excel
+            function generateExcel(dataArray) {
+                const labels = translations['pl'];
+                
+                // Przygotowanie danych do Excela
+                const headers = [
+                    labels.platformHeader, 
+                    labels.categoryHeader, 
+                    labels.valueHeader,
+                    "TAX",
+                    "Waluta"
+                ];
+                
+                const excelData = [headers];
+                
+                dataArray.forEach(data => {
+                    Object.entries(data.financialData).forEach(([category, value]) => {
+                        // Pomijamy kategorię "Transfers"
+                        if (category === 'Transfers') return;
+                        
+                        // Dodajemy wartość podatku dla tej kategorii
+                        const taxValue = data.taxData && data.taxData[category] ? data.taxData[category] : 0;
+                        
+                        excelData.push([
+                            data.platform,
+                            category,
+                            value,
+                            taxValue,
+                            data.currency || ''
+                        ]);
+                    });
+                });
+                
+                // Tworzenie arkusza
+                const ws = XLSX.utils.aoa_to_sheet(excelData);
+                
+                // Tworzenie workbooka
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Dane finansowe');
+                
+                // Generowanie i pobieranie pliku
+                const fileName = `Amazon_financial_data_summary.xlsx`;
+                XLSX.writeFile(wb, fileName);
+                
+                showAlert(labels.downloadSuccess, 'success');
+            }
+            
+            processBtn.addEventListener('click', async function() {
+                const file = fileInput.files[0];
+                const platform = platformSelect.value;
+                const labels = translations['pl'];
+                
+                // Dla celów testowych - zawsze używamy danych demo
+                if (!file && getMode() === 'backend') {
+                    showAlert("Brak pliku, używam danych testowych", 'error');
+                    // Kontynuujemy z danymi demo
+                }
+                
+                // Pokazujemy loader
+                loader.classList.remove('hidden');
+                alertArea.classList.add('hidden');
+                
+                try {
+                    let extractedData;
+                    
+                    // Zawsze używamy danych demo, niezależnie od trybu
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Symulacja opóźnienia
+                    extractedData = { ...demoData[platform] };
+                    
+                    // Dodajemy dane do istniejących danych
+                    addDataToResults(extractedData);
+                    
+                    // Resetujemy pole wyboru pliku po przetworzeniu
+                    fileInput.value = '';
+                    
+                    // Pokazujemy obszar wyników
+                    resultArea.classList.remove('hidden');
+                    showAlert(labels.processSuccess, 'success');
+                } catch (error) {
+                    console.error('Błąd przetwarzania pliku:', error);
+                    showAlert('Wystąpił błąd podczas przetwarzania pliku: ' + error.message, 'error');
+                } finally {
+                    // Ukrywamy loader
+                    loader.classList.add('hidden');
+                }
+            });
+            
+            downloadBtn.addEventListener('click', function() {
+                const labels = translations['pl'];
+                
+                if (allProcessedData.length > 0) {
+                    generateExcel(allProcessedData);
+                } else {
+                    showAlert(labels.noDataError, 'error');
+                }
+            });
+            
+            clearBtn.addEventListener('click', function() {
+                const labels = translations['pl'];
+                
+                // Czyszczenie danych
+                allProcessedData = [];
+                resultBody.innerHTML = '';
+                
+                // Ukrywamy obszar wyników
+                resultArea.classList.add('hidden');
+                showAlert(labels.dataCleared, 'success');
+            });
+        });
+    </script>
+</body>
+</html>
