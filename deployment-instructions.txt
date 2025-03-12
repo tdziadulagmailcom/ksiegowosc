@@ -1,0 +1,111 @@
+# Instrukcje wdrożenia aplikacji Amazon Reports Processor
+
+## Struktura projektu
+Aplikacja składa się z dwóch głównych komponentów:
+1. Backend (Python/Flask) - odpowiedzialny za przetwarzanie plików PDF i Excel
+2. Frontend (HTML/JS) - interfejs użytkownika
+
+## Wymagania
+- Python 3.8 lub nowszy
+- Node.js i npm (opcjonalnie, do lokalnego hostowania frontendu)
+- Konto GitHub
+- Konto na render.com
+
+## Krok 1: Przygotowanie repozytorium GitHub
+
+1. Utwórz nowe repozytorium na GitHub
+2. Sklonuj repozytorium lokalnie
+3. Utwórz następującą strukturę katalogów:
+
+```
+amazon-reports-processor/
+├── backend/
+│   ├── app.py
+│   └── requirements.txt
+└── frontend/
+    └── index.html
+```
+
+4. Skopiuj odpowiednie pliki do katalogów:
+   - Plik `backend-file-parser.py` → `backend/app.py`
+   - Plik `requirements-file.txt` → `backend/requirements.txt`
+   - Plik `frontend-application.html` → `frontend/index.html`
+
+5. Zatwierdź i wypchnij zmiany do GitHub:
+```bash
+git add .
+git commit -m "Initial commit"
+git push origin main
+```
+
+## Krok 2: Wdrożenie backendu na render.com
+
+1. Zaloguj się na render.com
+2. Kliknij "New +" i wybierz "Web Service"
+3. Połącz z repozytorium GitHub
+4. Skonfiguruj usługę:
+   - Nazwa: `amazon-reports-backend` (lub inna preferowana)
+   - Region: wybierz najbliższy geograficznie
+   - Runtime: Python 3
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `gunicorn app:app`
+   - Root Directory: `backend`
+   - Environment Variables:
+     - `PYTHON_VERSION`: 3.8
+
+5. Kliknij "Create Web Service"
+6. Poczekaj na zakończenie wdrożenia i zapisz URL backendu (np. https://amazon-reports-backend.onrender.com)
+
+## Krok 3: Wdrożenie frontendu na render.com
+
+1. Na render.com kliknij "New +" i wybierz "Static Site"
+2. Połącz z tym samym repozytorium GitHub
+3. Skonfiguruj usługę:
+   - Nazwa: `amazon-reports-frontend` (lub inna preferowana)
+   - Root Directory: `frontend`
+   - Publish Directory: `.` (kropka)
+   - Build Command: (pozostaw puste)
+
+4. Kliknij "Create Static Site"
+5. Poczekaj na zakończenie wdrożenia i zapisz URL frontendu
+
+## Krok 4: Konfiguracja projektu
+
+1. Otwórz wdrożony frontend w przeglądarce
+2. Wybierz tryb "Tryb rzeczywisty (z backendem)"
+3. Wprowadź URL backendu w pole "URL backendu"
+4. Teraz możesz korzystać z aplikacji!
+
+## Korzystanie w trybie lokalnym (opcjonalne)
+
+### Uruchomienie backendu lokalnie:
+```bash
+cd backend
+pip install -r requirements.txt
+flask run
+```
+
+Backend będzie dostępny pod adresem: http://localhost:5000
+
+### Uruchomienie frontendu lokalnie:
+Możesz po prostu otworzyć plik `frontend/index.html` w przeglądarce lub użyć prostego serwera HTTP:
+
+```bash
+cd frontend
+python -m http.server 8000
+```
+
+Frontend będzie dostępny pod adresem: http://localhost:8000
+
+## Rozwiązywanie problemów
+
+1. Jeśli backend zwraca błędy:
+   - Sprawdź logi na render.com
+   - Upewnij się, że wszystkie wymagane pakiety są zainstalowane
+   - Sprawdź, czy plik PDF/Excel ma odpowiedni format
+
+2. Jeśli frontend nie może połączyć się z backendem:
+   - Sprawdź, czy URL backendu jest poprawny
+   - Upewnij się, że backend jest uruchomiony
+   - Sprawdź, czy nie ma problemów z CORS
+   - W ostateczności przełącz na "Tryb demo" aby przetestować interfejs
