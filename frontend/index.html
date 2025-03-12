@@ -48,7 +48,7 @@
             color: #0066cc; /* Niebieski */
         }
         
-        select, input[type="file"] {
+        select, input[type="file"], input[type="text"] {
             width: 100%;
             padding: 12px;
             border: 1px solid #b3d9ff; /* Jasnoniebieski */
@@ -58,7 +58,7 @@
             transition: border-color 0.3s, box-shadow 0.3s;
         }
         
-        select:focus, input[type="file"]:focus {
+        select:focus, input[type="file"]:focus, input[type="text"]:focus {
             outline: none;
             border-color: #0066cc;
             box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2);
@@ -257,7 +257,7 @@
         
         <div id="backendUrlSection" class="backend-url-section hidden">
             <label for="backendUrl">URL backendu:</label>
-            <input type="text" id="backendUrl" value="http://localhost:5000">
+            <input type="text" id="backendUrl" value="https://ksiegowosc.onrender.com">
         </div>
         
         <div class="form-group">
@@ -491,6 +491,29 @@
                     }
                 });
             
+            downloadBtn.addEventListener('click', function() {
+                const labels = translations['pl'];
+                
+                if (allProcessedData.length > 0) {
+                    generateExcel(allProcessedData);
+                } else {
+                    showAlert(labels.noDataError, 'error');
+                }
+            });
+            
+            clearBtn.addEventListener('click', function() {
+                const labels = translations['pl'];
+                
+                // Czyszczenie danych
+                allProcessedData = [];
+                resultBody.innerHTML = '';
+                
+                // Ukrywamy obszar wyników
+                resultArea.classList.add('hidden');
+                showAlert(labels.dataCleared, 'success');
+            });
+            });
+            
             // Funkcja do przetwarzania pliku przez backend
             async function processFileWithBackend(file, platform) {
                 const backendUrl = backendUrlInput.value.trim();
@@ -529,55 +552,3 @@
                     }
                     
                     throw new Error(translations['pl'].backendError);
-                }
-            }
-            });
-            
-            // Funkcja sprawdzająca aktualny tryb
-            function getMode() {
-                const checkedRadio = document.querySelector('input[name="mode"]:checked');
-                return checkedRadio ? checkedRadio.value : 'demo';
-            }
-            
-            processBtn.addEventListener('click', async function() {
-                const file = fileInput.files[0];
-                const platform = platformSelect.value;
-                const labels = translations['pl'];
-                
-                if (!file && getMode() === 'backend') {
-                    showAlert(labels.noFileError, 'error');
-                    return;
-                }
-                
-                // Pokazujemy loader
-                loader.classList.remove('hidden');
-                alertArea.classList.add('hidden');
-                
-                try {
-                    let extractedData;
-                    
-                    if (getMode() === 'demo') {
-                        // W trybie demo używamy danych demonstracyjnych
-                        await new Promise(resolve => setTimeout(resolve, 1000)); // Symulacja opóźnienia
-                        extractedData = { ...demoData[platform] };
-                    } else {
-                        // W trybie z backendem wysyłamy plik do API
-                        extractedData = await processFileWithBackend(file, platform);
-                    }
-                    
-                    // Dodajemy dane do istniejących danych
-                    addDataToResults(extractedData);
-                    
-                    // Resetujemy pole wyboru pliku po przetworzeniu
-                    fileInput.value = '';
-                    
-                    // Pokazujemy obszar wyników
-                    resultArea.classList.remove('hidden');
-                    showAlert(labels.processSuccess, 'success');
-                } catch (error) {
-                    console.error('Błąd przetwarzania pliku:', error);
-                    showAlert('Wystąpił błąd podczas przetwarzania pliku: ' + error.message, 'error');
-                } finally {
-                    // Ukrywamy loader
-                    loader.classList.add('hidden');
-                }
